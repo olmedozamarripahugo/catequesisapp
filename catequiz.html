@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CateQuiz: Aprende tu Fe</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Tone.js for audio generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #87CEEB, #ADD8E6); /* Cielo azul claro */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden; /* Prevent scroll on some elements */
+        }
+        .game-container {
+            background-color: #FFFFFF; /* Blanco puro para el contenedor */
+            border-radius: 2rem; /* Bordes muy redondeados */
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2); /* Sombra suave */
+            padding: 2rem;
+            max-width: 90%;
+            width: 800px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            border: 8px solid #FFD700; /* Borde dorado */
+        }
+        .screen {
+            display: none; /* Ocultar todas las pantallas por defecto */
+            animation: fadeIn 0.5s ease-out;
+        }
+        .screen.active {
+            display: block; /* Mostrar la pantalla activa */
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .btn-primary {
+            background-color: #FF69B4; /* Rosa brillante */
+            color: white;
+            padding: 0.8rem 2rem;
+            border-radius: 9999px; /* Botones pill */
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(255, 105, 180, 0.4);
+            border: 3px solid #FF1493; /* Borde rosa oscuro */
+        }
+        .btn-primary:hover {
+            background-color: #FF1493; /* Rosa más oscuro al pasar el ratón */
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(255, 105, 180, 0.6);
+        }
+        .btn-level {
+            background-color: #90EE90; /* Verde claro */
+            color: #333;
+            padding: 1.5rem 1rem;
+            border-radius: 1.5rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(144, 238, 144, 0.4);
+            border: 3px solid #32CD32; /* Borde verde lima */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 120px; /* Altura mínima para los botones de nivel */
+        }
+        .btn-level:hover {
+            background-color: #32CD32; /* Verde lima al pasar el ratón */
+            color: white;
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(144, 238, 144, 0.6);
+        }
+        .btn-level i {
+            font-size: 2.5rem; /* Iconos grandes */
+            margin-bottom: 0.5rem;
+            color: #4B0082; /* Índigo oscuro para los iconos */
+        }
+        .jesus-container {
+            position: absolute;
+            bottom: 0;
+            right: 2rem;
+            width: 150px; /* Tamaño de Jesús */
+            height: 150px;
+            overflow: hidden; /* Para que no se salga de los bordes */
+            transition: transform 0.3s ease;
+        }
+        .jesus-container.happy {
+            transform: scale(1.1) translateY(-10px);
+            animation: bounceJesus 0.8s infinite alternate;
+        }
+        .jesus-container.sad {
+            transform: scale(0.9) translateY(5px);
+            animation: shakeJesus 0.5s ease-in-out;
+        }
+        @keyframes bounceJesus {
+            0% { transform: translateY(0) scale(1.1); }
+            100% { transform: translateY(-10px) scale(1.1); }
+        }
+        @keyframes shakeJesus {
+            0%, 100% { transform: translateX(0) scale(0.9); }
+            20%, 60% { transform: translateX(-5px) scale(0.9); }
+            40%, 80% { transform: translateX(5px) scale(0.9); }
+        }
+        .jesus-svg {
+            width: 100%;
+            height: 100%;
+        }
+        .feedback-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .feedback-modal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .feedback-content {
+            background-color: #FFFACD; /* Limón Chiffon */
+            padding: 2.5rem;
+            border-radius: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            position: relative;
+            border: 5px solid #FFD700;
+            animation: popIn 0.4s ease-out;
+        }
+        @keyframes popIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .feedback-content h2 {
+            color: #8B0000; /* Rojo oscuro */
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        .feedback-content p {
+            font-size: 1.5rem;
+            color: #4B0082; /* Índigo oscuro */
+            margin-bottom: 2rem;
+        }
+        .option-button {
+            background-color: #FFDAB9; /* Melocotón */
+            color: #333;
+            padding: 0.8rem 1.5rem;
+            border-radius: 1.5rem;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            box-shadow: 0 3px 10px rgba(255, 218, 185, 0.4);
+            border: 2px solid #FFA07A; /* Salmón claro */
+            width: 100%; /* Ocupa todo el ancho disponible */
+            margin-bottom: 0.8rem;
+        }
+        .option-button:hover {
+            background-color: #FFA07A; /* Salmón claro al pasar el ratón */
+            color: white;
+            transform: translateY(-2px);
+        }
+        .option-button.correct {
+            background-color: #98FB98; /* Verde menta */
+            border-color: #3CB371; /* Verde mar */
+            color: white;
+        }
+        .option-button.incorrect {
+            background-color: #FFB6C1; /* Rosa claro */
+            border-color: #FF6347; /* Tomate */
+            color: white;
+        }
+        /* Estilos para dispositivos móviles */
+        @media (max-width: 768px) {
+            .game-container {
+                padding: 1rem;
+                border-radius: 1.5rem;
+            }
+            .btn-primary {
+                padding: 0.6rem 1.5rem;
+                font-size: 0.9rem;
+            }
+            .btn-level {
+                padding: 1rem 0.5rem;
+                min-height: 100px;
+                font-size: 0.9rem;
+            }
+            .btn-level i {
+                font-size: 2rem;
+            }
+            .jesus-container {
+                width: 100px;
+                height: 100px;
+                right: 1rem;
+                bottom: 0.5rem;
+            }
+            .feedback-content {
+                padding: 1.5rem;
+            }
+            .feedback-content h2 {
+                font-size: 2rem;
+            }
+            .feedback-content p {
+                font-size: 1.2rem;
+            }
+            .option-button {
+                padding: 0.6rem 1rem;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <!-- Pantalla de Registro -->
+        <div id="registration-screen" class="screen active">
+            <h1 class="text-5xl font-bold text-blue-700 mb-8">¡Bienvenido a CateQuiz!</h1>
+            <p class="text-xl text-gray-700 mb-6">¿Cómo te llamas, pequeño aprendiz?</p>
+            <input type="text" id="player-name-input" placeholder="Tu nombre o apodo"
+                   class="w-full max-w-md p-4 mb-6 text-center text-2xl border-4 border-purple-400 rounded-xl focus:outline-none focus:border-purple-600 transition duration-300 ease-in-out">
+            <button id="start-game-btn" class="btn-primary text-2xl">¡Empezar a Aprender!</button>
+        </div>
+
+        <!-- Menú Principal / Mapa de Niveles -->
+        <div id="main-menu" class="screen">
+            <h1 class="text-4xl font-bold text-blue-700 mb-6">¡Hola, <span id="player-name-display"></span>!</h1>
+            <p class="text-xl text-gray-700 mb-8">Elige un camino para aprender:</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <button class="btn-level" data-level="oraciones">
+                    <i class="fas fa-hands-praying"></i>
+                    <span class="text-xl">1) Oraciones Básicas</span>
+                </button>
+                <button class="btn-level" data-level="mandamientos">
+                    <i class="fas fa-book-bible"></i>
+                    <span class="text-xl">2) Los Mandamientos</span>
+                </button>
+                <button class="btn-level" data-level="sacramentos">
+                    <i class="fas fa-cross"></i>
+                    <span class="text-xl">3) Los Sacramentos</span>
+                </button>
+                <button class="btn-level" data-level="credo">
+                    <i class="fas fa-scroll"></i>
+                    <span class="text-xl">4) El Credo</span>
+                </button>
+            </div>
+            <button id="reset-progress-btn" class="btn-primary bg-red-500 hover:bg-red-700 text-lg">Reiniciar Progreso</button>
+        </div>
+
+        <!-- Pantalla de Juego (Minijuego) -->
+        <div id="game-screen" class="screen">
+            <h2 id="game-level-title" class="text-3xl font-bold text-blue-700 mb-6"></h2>
+            <div id="minigame-area" class="bg-yellow-100 p-6 rounded-xl border-4 border-yellow-400 mb-6">
+                <!-- El contenido del minijuego se cargará aquí dinámicamente -->
+                <p id="question-text" class="text-2xl text-gray-800 mb-6"></p>
+                <div id="options-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Las opciones de respuesta se cargarán aquí -->
+                </div>
+            </div>
+            <button id="back-to-menu-btn" class="btn-primary bg-gray-500 hover:bg-gray-700 text-lg">Volver al Menú</button>
+        </div>
+
+        <!-- Modal de Feedback (Acierto/Fallo) -->
+        <div id="feedback-modal" class="feedback-modal">
+            <div class="feedback-content">
+                <h2 id="feedback-title"></h2>
+                <p id="feedback-message"></p>
+                <button id="close-feedback-btn" class="btn-primary">¡Entendido!</button>
+            </div>
+        </div>
+
+        <!-- Animación de Jesús -->
+        <div id="jesus-animation" class="jesus-container">
+            <svg class="jesus-svg" viewBox="0 0 100 100">
+                <!-- Cuerpo de Jesús (simplificado) -->
+                <rect x="35" y="40" width="30" height="45" rx="10" fill="#8B4513"/> <!-- Túnica marrón -->
+                <rect x="30" y="45" width="40" height="30" rx="10" fill="#FFD700"/> <!-- Túnica dorada -->
+                <!-- Cara de Jesús -->
+                <circle cx="50" cy="30" r="15" fill="#FFDBAC"/> <!-- Piel -->
+                <!-- Ojos (cambian con el estado) -->
+                <circle class="eye left-eye" cx="44" cy="28" r="2" fill="black"/>
+                <circle class="eye right-eye" cx="56" cy="28" r="2" fill="black"/>
+                <!-- Boca (cambia con el estado) -->
+                <path class="mouth" d="M 45 35 Q 50 38 55 35" stroke="black" stroke-width="1.5" fill="none"/>
+                <!-- Cabello y barba -->
+                <path d="M 35 20 Q 50 10 65 20 C 68 25 65 30 60 35 C 55 40 45 40 40 35 C 35 30 32 25 35 20 Z" fill="#A0522D"/> <!-- Cabello -->
+                <path d="M 45 38 C 40 42 60 42 55 38 L 50 45 Z" fill="#A0522D"/> <!-- Barba -->
+                <!-- Halo (opcional, para acierto) -->
+                <circle class="halo" cx="50" cy="15" r="10" fill="yellow" opacity="0.6" style="display:none;"/>
+            </svg>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales
+        const playerNameInput = document.getElementById('player-name-input');
+        const startGameBtn = document.getElementById('start-game-btn');
+        const playerNameDisplay = document.getElementById('player-name-display');
+        const mainMenu = document.getElementById('main-menu');
+        const registrationScreen = document.getElementById('registration-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const gameLevelTitle = document.getElementById('game-level-title');
+        const minigameArea = document.getElementById('minigame-area');
+        const backToMenuBtn = document.getElementById('back-to-menu-btn');
+        const feedbackModal = document.getElementById('feedback-modal');
+        const feedbackTitle = document.getElementById('feedback-title');
+        const feedbackMessage = document.getElementById('feedback-message');
+        const closeFeedbackBtn = document.getElementById('close-feedback-btn');
+        const jesusAnimation = document.getElementById('jesus-animation');
+        const jesusMouth = document.querySelector('.jesus-svg .mouth');
+        const jesusLeftEye = document.querySelector('.jesus-svg .left-eye');
+        const jesusRightEye = document.querySelector('.jesus-svg .right-eye');
+        const jesusHalo = document.querySelector('.jesus-svg .halo');
+        const resetProgressBtn = document.getElementById('reset-progress-btn');
+
+        let playerState = {
+            name: '',
+            progress: {}, // { 'oraciones': { completed: true, score: 100 }, ... }
+            currentLevel: '',
+            currentMinigameIndex: 0
+        };
+
+        // --- Configuración de Audio ---
+        // Contexto de audio de Tone.js
+        const synth = new Tone.Synth().toDestination();
+        const successSynth = new Tone.MembraneSynth().toDestination();
+        const errorSynth = new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: "sine" }
+        }).toDestination();
+
+        function playClickSound() {
+            synth.triggerAttackRelease("C4", "8n");
+        }
+
+        function playSuccessSound() {
+            successSynth.triggerAttackRelease("C5", "8n");
+            successSynth.triggerAttackRelease("E5", "8n", Tone.now() + 0.1);
+            successSynth.triggerAttackRelease("G5", "8n", Tone.now() + 0.2);
+        }
+
+        function playErrorSound() {
+            errorSynth.triggerAttackRelease(["C3", "F#3"], "8n");
+        }
+
+        // Música de fondo (placeholder, idealmente cargarías un archivo de audio real)
+        let backgroundMusic = new Audio();
+        // Puedes reemplazar esto con tu archivo de música:
+        // backgroundMusic.src = 'ruta/a/tu/musica.mp3';
+        // backgroundMusic.loop = true;
+        // backgroundMusic.volume = 0.3; // Volumen bajo
+
+        // Función para iniciar la música de fondo
+        function startBackgroundMusic() {
+            // Comentar o descomentar si tienes un archivo de música
+            // backgroundMusic.play().catch(e => console.log("Error al reproducir música:", e));
+            console.log("Música de fondo iniciada (si hay un archivo configurado).");
+        }
+
+
+        // --- Datos del Juego ---
+        const gameData = {
+            oraciones: [
+                {
+                    type: 'multiple-choice',
+                    question: '¿Cuál es la primera oración que Jesús nos enseñó?',
+                    options: ['Ave María', 'Padre Nuestro', 'Gloria al Padre', 'Credo'],
+                    answer: 'Padre Nuestro',
+                    feedback: '¡Exacto! El Padre Nuestro es la oración que Jesús mismo nos enseñó.'
+                },
+                {
+                    type: 'multiple-choice',
+                    question: '¿Cómo comienza la oración del Ave María?',
+                    options: ['Dios te salve, Reina y Madre', 'Dios te salve, María', 'Padre Nuestro que estás', 'Gloria al Padre'],
+                    answer: 'Dios te salve, María',
+                    feedback: '¡Muy bien! Así es como saludamos a nuestra Madre María.'
+                },
+                {
+                    type: 'fill-in-the-blanks',
+                    question: 'Completa la frase: "En el nombre del Padre, y del Hijo, y del Espíritu ____."',
+                    blanks: ['Santo'],
+                    options: ['Santo', 'Amor', 'Dios', 'Cielo'],
+                    answer: 'Santo',
+                    feedback: '¡Correcto! El Espíritu Santo nos acompaña siempre.'
+                }
+            ],
+            mandamientos: [
+                {
+                    type: 'multiple-choice',
+                    question: '¿Cuántos son los Mandamientos de la Ley de Dios?',
+                    options: ['Cinco', 'Siete', 'Diez', 'Doce'],
+                    answer: 'Diez',
+                    feedback: '¡Así es! Son diez reglas para vivir en amor.'
+                },
+                {
+                    type: 'multiple-choice',
+                    question: 'El primer Mandamiento nos dice: "Amarás a Dios sobre todas las ____".',
+                    options: ['cosas', 'personas', 'reglas', 'virtudes'],
+                    answer: 'cosas',
+                    feedback: '¡Excelente! Dios debe ser lo más importante en nuestra vida.'
+                }
+            ],
+            sacramentos: [
+                {
+                    type: 'multiple-choice',
+                    question: '¿Cuál es el sacramento que nos hace hijos de Dios y nos borra el pecado original?',
+                    options: ['Primera Comunión', 'Confirmación', 'Bautismo', 'Matrimonio'],
+                    answer: 'Bautismo',
+                    feedback: '¡Correcto! El Bautismo es nuestra puerta a la vida cristiana.'
+                },
+                {
+                    type: 'multiple-choice',
+                    question: '¿Cuántos son los Sacramentos de la Iglesia Católica?',
+                    options: ['Cinco', 'Siete', 'Diez', 'Doce'],
+                    answer: 'Siete',
+                    feedback: '¡Muy bien! Son siete regalos especiales de Dios.'
+                }
+            ],
+            credo: [
+                {
+                    type: 'multiple-choice',
+                    question: '¿En quién creemos cuando rezamos el Credo?',
+                    options: ['Solo en Jesús', 'En Dios Padre, Hijo y Espíritu Santo', 'En los santos', 'En los ángeles'],
+                    answer: 'En Dios Padre, Hijo y Espíritu Santo',
+                    feedback: '¡Así es! El Credo es nuestra profesión de fe en la Santísima Trinidad.'
+                },
+                {
+                    type: 'multiple-choice',
+                    question: 'En el Credo decimos que Jesús "padeció bajo el poder de ____".',
+                    options: ['Herodes', 'Caifás', 'Poncio Pilato', 'Judas'],
+                    answer: 'Poncio Pilato',
+                    feedback: '¡Correcto! Recordamos su pasión y muerte por nosotros.'
+                }
+            ]
+        };
+
+        // --- Funciones de Estado del Juego ---
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function saveProgress() {
+            localStorage.setItem('catequizPlayerState', JSON.stringify(playerState));
+            console.log('Progreso guardado:', playerState);
+        }
+
+        function loadProgress() {
+            const savedState = localStorage.getItem('catequizPlayerState');
+            if (savedState) {
+                playerState = JSON.parse(savedState);
+                console.log('Progreso cargado:', playerState);
+                if (playerState.name) {
+                    playerNameDisplay.textContent = playerState.name;
+                    showScreen('main-menu');
+                    startBackgroundMusic();
+                } else {
+                    showScreen('registration-screen');
+                }
+            } else {
+                showScreen('registration-screen');
+            }
+        }
+
+        function resetProgress() {
+            if (confirm('¿Estás seguro de que quieres reiniciar todo tu progreso?')) {
+                localStorage.removeItem('catequizPlayerState');
+                playerState = {
+                    name: '',
+                    progress: {},
+                    currentLevel: '',
+                    currentMinigameIndex: 0
+                };
+                showScreen('registration-screen');
+                playerNameInput.value = ''; // Limpiar el input de nombre
+                alert('¡Tu progreso ha sido reiniciado!'); // Usar un modal personalizado en un juego real
+            }
+        }
+
+        // --- Funciones de Animación de Jesús ---
+        function updateJesus(isCorrect) {
+            jesusAnimation.classList.remove('happy', 'sad');
+            jesusHalo.style.display = 'none'; // Ocultar halo por defecto
+
+            if (isCorrect) {
+                jesusAnimation.classList.add('happy');
+                jesusMouth.setAttribute('d', 'M 40 35 Q 50 40 60 35'); // Sonrisa
+                jesusLeftEye.setAttribute('r', '2'); // Ojos normales
+                jesusRightEye.setAttribute('r', '2');
+                jesusHalo.style.display = 'block'; // Mostrar halo
+                playSuccessSound();
+            } else {
+                jesusAnimation.classList.add('sad');
+                jesusMouth.setAttribute('d', 'M 40 38 Q 50 35 60 38'); // Triste
+                jesusLeftEye.setAttribute('r', '1.5'); // Ojos ligeramente cerrados
+                jesusRightEye.setAttribute('r', '1.5');
+                playErrorSound();
+            }
+
+            // Resetear animación después de un tiempo
+            setTimeout(() => {
+                jesusAnimation.classList.remove('happy', 'sad');
+                jesusMouth.setAttribute('d', 'M 45 35 Q 50 38 55 35'); // Boca neutra
+                jesusLeftEye.setAttribute('r', '2');
+                jesusRightEye.setAttribute('r', '2');
+                jesusHalo.style.display = 'none';
+            }, 1500); // Duración de la animación
+        }
+
+        // --- Funciones de Minijuegos ---
+        function renderMinigame() {
+            minigameArea.innerHTML = ''; // Limpiar área del minijuego
+            const levelData = gameData[playerState.currentLevel];
+            if (!levelData || playerState.currentMinigameIndex >= levelData.length) {
+                // Nivel completado
+                showFeedback('¡Felicidades!', `¡Has completado el nivel de ${gameLevelTitle.textContent}! ¡Dios se alegra cuando aprendes!`, true);
+                playerState.progress[playerState.currentLevel] = { completed: true, score: 100 }; // Marcar como completado
+                saveProgress();
+                setTimeout(() => showScreen('main-menu'), 2000); // Volver al menú después del feedback
+                return;
+            }
+
+            const currentMinigame = levelData[playerState.currentMinigameIndex];
+            gameLevelTitle.textContent = `Nivel: ${playerState.currentLevel.charAt(0).toUpperCase() + playerState.currentLevel.slice(1)}`;
+
+            if (currentMinigame.type === 'multiple-choice') {
+                renderMultipleChoice(currentMinigame);
+            } else if (currentMinigame.type === 'fill-in-the-blanks') {
+                renderFillInTheBlanks(currentMinigame);
+            }
+            // Aquí se añadirían más tipos de minijuegos (sopa de letras, arrastrar y soltar)
+        }
+
+        function renderMultipleChoice(minigame) {
+            minigameArea.innerHTML = `
+                <p id="question-text" class="text-2xl text-gray-800 mb-6">${minigame.question}</p>
+                <div id="options-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            `;
+            const optionsContainer = document.getElementById('options-container');
+
+            // Mezclar opciones para que no siempre estén en el mismo orden
+            const shuffledOptions = [...minigame.options].sort(() => Math.random() - 0.5);
+
+            shuffledOptions.forEach(option => {
+                const button = document.createElement('button');
+                button.classList.add('option-button');
+                button.textContent = option;
+                button.addEventListener('click', () => checkAnswer(option, minigame.answer, minigame.feedback));
+                optionsContainer.appendChild(button);
+            });
+        }
+
+        function renderFillInTheBlanks(minigame) {
+            const questionText = minigame.question;
+            const blanks = minigame.blanks;
+            const options = [...minigame.options].sort(() => Math.random() - 0.5); // Mezclar opciones
+
+            let displayQuestion = questionText;
+            blanks.forEach(blank => {
+                displayQuestion = displayQuestion.replace('____', `<span class="blank-spot bg-blue-200 px-4 py-1 rounded-md inline-block min-w-[100px] text-center text-blue-800 font-semibold">____</span>`);
+            });
+
+            minigameArea.innerHTML = `
+                <p id="question-text" class="text-2xl text-gray-800 mb-6">${displayQuestion}</p>
+                <div id="blank-input-container" class="mb-4"></div>
+                <div id="options-container" class="flex flex-wrap justify-center gap-3"></div>
+            `;
+
+            const blankInputContainer = document.getElementById('blank-input-container');
+            const optionsContainer = document.getElementById('options-container');
+
+            // Crear un input para cada espacio en blanco (simplificado a uno por ahora)
+            const inputField = document.createElement('input');
+            inputField.type = 'text';
+            inputField.placeholder = 'Escribe aquí';
+            inputField.classList.add('w-full', 'max-w-xs', 'p-3', 'text-center', 'text-xl', 'border-2', 'border-green-400', 'rounded-lg', 'focus:outline-none', 'focus:border-green-600');
+            blankInputContainer.appendChild(inputField);
+
+            options.forEach(option => {
+                const button = document.createElement('button');
+                button.classList.add('option-button', 'text-lg', 'px-4', 'py-2', 'flex-grow');
+                button.textContent = option;
+                button.addEventListener('click', () => {
+                    inputField.value = option; // Rellenar el input con la opción seleccionada
+                    checkAnswer(inputField.value, minigame.answer, minigame.feedback);
+                });
+                optionsContainer.appendChild(button);
+            });
+
+            // Añadir un botón para verificar la respuesta escrita
+            const checkButton = document.createElement('button');
+            checkButton.classList.add('btn-primary', 'mt-4');
+            checkButton.textContent = 'Verificar';
+            checkButton.addEventListener('click', () => {
+                checkAnswer(inputField.value, minigame.answer, minigame.feedback);
+            });
+            minigameArea.appendChild(checkButton);
+        }
+
+
+        function checkAnswer(selectedAnswer, correctAnswer, feedbackMsg) {
+            const isCorrect = (Array.isArray(correctAnswer) ? correctAnswer.includes(selectedAnswer) : selectedAnswer === correctAnswer);
+            const optionsButtons = document.querySelectorAll('.option-button');
+
+            optionsButtons.forEach(button => {
+                button.disabled = true; // Deshabilitar botones después de la selección
+                if (button.textContent === correctAnswer) {
+                    button.classList.add('correct');
+                } else if (button.textContent === selectedAnswer && !isCorrect) {
+                    button.classList.add('incorrect');
+                }
+            });
+
+            updateJesus(isCorrect);
+            showFeedback(isCorrect ? '¡Muy bien!' : '¡Inténtalo de nuevo!', feedbackMsg, isCorrect);
+
+            setTimeout(() => {
+                feedbackModal.classList.remove('active');
+                if (isCorrect) {
+                    playerState.currentMinigameIndex++;
+                    renderMinigame(); // Cargar el siguiente minijuego
+                } else {
+                    // Podríamos permitir reintentar o simplemente pasar al siguiente
+                    // Por ahora, simplemente cerramos el feedback y el usuario puede reintentar
+                    // o volver al menú. Para un juego real, se podría añadir un contador de intentos.
+                    optionsButtons.forEach(button => {
+                        button.disabled = false;
+                        button.classList.remove('correct', 'incorrect');
+                    });
+                }
+            }, 2000); // Tiempo para ver el feedback y la animación
+        }
+
+
+        function showFeedback(title, message, isCorrect) {
+            feedbackTitle.textContent = title;
+            feedbackMessage.textContent = message;
+            feedbackModal.classList.add('active');
+            // No cerramos el modal automáticamente aquí, el botón "¡Entendido!" lo hará
+        }
+
+        // --- Event Listeners ---
+        startGameBtn.addEventListener('click', () => {
+            playClickSound();
+            const name = playerNameInput.value.trim();
+            if (name) {
+                playerState.name = name;
+                playerNameDisplay.textContent = name;
+                saveProgress();
+                showScreen('main-menu');
+                startBackgroundMusic();
+            } else {
+                alert('Por favor, ingresa tu nombre o apodo para empezar.'); // Usar un modal personalizado en un juego real
+            }
+        });
+
+        document.querySelectorAll('.btn-level').forEach(button => {
+            button.addEventListener('click', (event) => {
+                playClickSound();
+                playerState.currentLevel = event.currentTarget.dataset.level;
+                playerState.currentMinigameIndex = 0; // Reiniciar el índice del minijuego al entrar a un nivel
+                saveProgress();
+                showScreen('game-screen');
+                renderMinigame();
+            });
+        });
+
+        backToMenuBtn.addEventListener('click', () => {
+            playClickSound();
+            showScreen('main-menu');
+        });
+
+        closeFeedbackBtn.addEventListener('click', () => {
+            playClickSound();
+            feedbackModal.classList.remove('active');
+        });
+
+        resetProgressBtn.addEventListener('click', () => {
+            playClickSound();
+            resetProgress();
+        });
+
+        // Cargar progreso al iniciar
+        window.onload = loadProgress;
+    </script>
+</body>
+</html>
